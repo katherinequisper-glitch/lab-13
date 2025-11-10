@@ -8,17 +8,24 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * @return void
      */
     public function up(): void
     {
         Schema::create('recordatorios', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('nota_id')->constrained()->onDelete('cascade');
+            $table->dateTime('fecha_vencimiento'); // Cambiado 'due_date' a 'fecha_vencimiento'
+            $table->boolean('completado')->default(false); // Cambiado 'is_completed' a 'completado'
             $table->timestamps();
         });
     }
 
     /**
      * Reverse the migrations.
+     *
+     * @return void
      */
     public function down(): void
     {
