@@ -85,7 +85,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Notes and Reminders</h1>
+        <h1>Not</h1>
         
         {{-- 1. Mensaje de éxito --}}
         @if (session('success'))
@@ -96,7 +96,6 @@
 
         {{-- 2. Formulario para Crear Nota --}}
         <div class="form-section">
-            <h2>Formulario para Crear Nota</h2>
             <form action="{{ route('notas.store') }}" method="POST">
                 @csrf
                 
