@@ -85,7 +85,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Not</h1>
+        <h1>Notas</h1>
         
         {{-- 1. Mensaje de éxito --}}
         @if (session('success'))
