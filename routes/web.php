@@ -36,3 +36,16 @@ Route::post('/notas', [NotaController::class, 'store'])->name('notas.store');
 Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+// RUTA PARA ELIMINAR LA NOTA (con borrado en cascada)
+Route::delete('/notas/{nota}', [NotaController::class, 'destroy'])->name('notas.destroy');
+
+// RUTAS ANIDADAS PARA EL CRUD DE ACTIVIDADES
+Route::prefix('notas/{nota}')->group(function () {
+    // Para guardar una nueva actividad
+    Route::post('actividads', [ActividadController::class, 'store'])->name('actividads.store');
+    
+    // Para marcar como completada (toggle)
+    Route::patch('actividads/{actividad}', [ActividadController::class, 'update'])->name('actividads.update');
+    
+});
