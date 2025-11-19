@@ -37,4 +37,11 @@ class NotaController extends Controller
         ]);
         return redirect()->route('notas.index')->with('success', 'Nota creada!');
     }
+    public function destroy(Nota $nota)
+    {
+        // Esto ejecuta el evento 'deleting' en el modelo Nota (Sección 2.C).
+        $nota->delete();
+
+        return redirect()->route('notas.index')->with('success', 'La nota y todos sus recordatorios/actividades han sido eliminados.');
+    }
 }
