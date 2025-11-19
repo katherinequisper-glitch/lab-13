@@ -6,9 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\Recordatorio; 
-use App\Models\Actividad;
-use Illuminate\Support\Facades\Log; 
+use Illuminate\Support\Facades\Log; // Asegúrate de importar Log si lo usas.
 
 class Nota extends Model
 {
@@ -16,51 +14,58 @@ class Nota extends Model
     
     protected $fillable = ['user_id', 'titulo', 'contenido'];
 
+    // =======================================================
+    // MÉTODO ÚNICO BOOTED (Global Scope y Eventos de Modelo)
+    // =======================================================
     protected static function booted()
     {
-        // 1. Alcance global ('activa')
+        // 1. Alcance global ('activa'): Solo mostrará notas con recordatorios activos (futuros y no completados).
         static::addGlobalScope('activa', function (Builder $builder) {
             $builder->whereHas('recordatorio', function ($query) {
                 $query->where('fecha_vencimiento', '>=', now())->where('completado', false);
             });
         });
         
-        // 2. Lógica de Borrado en Cascada (Evento 'deleting')
+        // 2. Evento 'deleting' para Borrado en Cascada (Soft Delete)
         // Se ejecuta ANTES del Soft Delete de la Nota.
         static::deleting(function (Nota $nota) {
-            // Elimina el Recordatorio (Soft Delete, si el modelo lo usa, o Hard Delete)
+            // Elimina el Recordatorio relacionado (hasOne)
             $nota->recordatorio()->delete(); 
             
-            // Elimina todas las Actividades (Hard Delete, ya que el modelo Actividad no usa Soft Deletes)
+            // Elimina todas las Actividades relacionadas (hasMany)
             $nota->actividads()->delete(); 
         });
     }
+
+    // =======================================================
+    // RELACIONES
+    // =======================================================
     
-    // Accesor: Formatear título con estado (Ya debe existir)
-    public function getTituloFormateadoAttribute()
-    {
-        // Usamos isset() o una comprobación para evitar errores si no hay recordatorio
-        if ($this->recordatorio) {
-            return $this->recordatorio->completado ? "[Completado] {$this->titulo}" : $this->titulo;
-        }
-        return $this->titulo;
-    }
-    
-    // Relación: Nota pertenece a un usuario (Ya debe existir)
+    // Relación 1:∞ (belongsTo)
     public function user()
     {
         return $this->belongsTo(User::class);
     }
     
-    // Relación: Nota tiene un recordatorio (Ya debe existir)
+    // Relación 1:1 (hasOne)
     public function recordatorio()
     {
         return $this->hasOne(Recordatorio::class);
     }
     
-    // Relación: Nota tiene muchas actividades (NUEVO)
+    // Relación 1:∞ (hasMany) - ¡Nueva relación para Actividades!
     public function actividads()
     {
         return $this->hasMany(Actividad::class);
+    }
+
+    // Accesor: Formatear título con estado [cite: 241, 73]
+    public function getTituloFormateadoAttribute()
+    {
+        // Asume que siempre hay recordatorio debido al Global Scope/lógica de creación.
+        if ($this->recordatorio) {
+            return $this->recordatorio->completado ? "[Completado] {$this->titulo}" : $this->titulo;
+        }
+        return $this->titulo;
     }
 }
