@@ -62,10 +62,12 @@ class Nota extends Model
     // Accesor: Formatear título con estado [cite: 241, 73]
     public function getTituloFormateadoAttribute()
     {
-        // Asume que siempre hay recordatorio debido al Global Scope/lógica de creación.
-        if ($this->recordatorio) {
-            return $this->recordatorio->completado ? "[Completado] {$this->titulo}" : $this->titulo;
+        $isCompleted = $this->recordatorio?->completado;
+    
+        if ($isCompleted) {
+            return "[Completado] {$this->titulo}";
         }
+    
         return $this->titulo;
     }
 }
