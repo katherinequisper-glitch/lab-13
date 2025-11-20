@@ -1,47 +1,39 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\User;
+
 use App\Models\Nota;
+use App\Models\User;
 use Illuminate\Http\Request;
+
 class NotaController extends Controller
 {
     public function index()
     {
-        // Load users with their active notes, reminders, and subquery for note count
-        $users = User::with(['notas', 'notas.recordatorio'])
-            ->addSelect([
-                'total_notas' => Nota::selectRaw('count(*)')
-                    ->whereColumn('user_id', 'users.id')
-                    ->whereHas('recordatorio', fn($query) => $query->where('fecha_vencimiento', '>=', now()))
-            ])
-            ->get();
+        $users = User::with('notas')->get();
         return view('notas.index', compact('users'));
     }
-    // Create a note with a reminder
+
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'titulo' => 'required|string|max:255',
-            'contenido' => 'required|string',
-            'fecha_vencimiento' => 'required|date|after:now',
+        $request->validate([
+            'user_id' => 'required',
+            'titulo' => 'required',
+            'contenido' => 'required',
         ]);
-        $note = Nota::create([
-            'user_id' => $validated['user_id'],
-            'titulo' => $validated['titulo'],
-            'contenido' => $validated['contenido'],
+
+        Nota::create([
+            'user_id' => $request->user_id,
+            'titulo' => $request->titulo,
+            'contenido' => $request->contenido,
         ]);
-        $note->recordatorio()->create([
-            'fecha_vencimiento' => $validated['fecha_vencimiento'],
-        ]);
-        return redirect()->route('notas.index')->with('success', 'Nota creada!');
+
+        return redirect()->route('notas.index')->with('success', 'Nota creada correctamente');
     }
+
     public function destroy(Nota $nota)
     {
-        // Esto ejecuta el evento 'deleting' en el modelo Nota (Sección 2.C).
         $nota->delete();
-
-        return redirect()->route('notas.index')->with('success', 'La nota y todos sus recordatorios/actividades han sido eliminados.');
+        return redirect()->route('notas.index')->with('success', 'Nota eliminada correctamente');
     }
 }

@@ -8,38 +8,33 @@ use Illuminate\Http\Request;
 
 class ActividadController extends Controller
 {
-    /**
-     * Guarda una nueva actividad para una Nota específica.
-     */
+    // Almacenar nueva actividad
     public function store(Request $request, Nota $nota)
     {
-        $validated = $request->validate([
+        $request->validate([
             'descripcion' => 'required|string|max:255',
         ]);
 
-        // Crea la actividad usando la relación
         $nota->actividads()->create([
-            'descripcion' => $validated['descripcion'],
+            'descripcion' => $request->descripcion,
+            'completada' => false,
         ]);
 
-        return back()->with('success', 'Actividad agregada a la nota.');
+        return redirect()->route('notas.index')->with('success', 'Actividad agregada!');
     }
 
-    /**
-     * Marca una actividad como completada (toggle).
-     */
+    // Actualizar actividad (marcar como completada/incompleta)
     public function update(Request $request, Nota $nota, Actividad $actividad)
     {
-        // Opcional: Verificación de pertenencia
+        // Verificar que la actividad pertenece a la nota
         if ($actividad->nota_id !== $nota->id) {
-            abort(404, 'La actividad no pertenece a esta nota.');
+            abort(403);
         }
 
-        // Cambia el estado 'completada' al opuesto
         $actividad->update([
-            'completada' => !$actividad->completada,
+            'completada' => !$actividad->completada
         ]);
 
-        return back()->with('success', 'Estado de actividad actualizado.');
+        return redirect()->route('notas.index')->with('success', 'Actividad actualizada!');
     }
 }

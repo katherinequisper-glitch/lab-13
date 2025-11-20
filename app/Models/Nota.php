@@ -5,69 +5,66 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Log; // Asegúrate de importar Log si lo usas.
 
 class Nota extends Model
 {
     use HasFactory, SoftDeletes;
     
-    protected $fillable = ['user_id', 'titulo', 'contenido'];
+    protected $fillable = [
+        'user_id',
+        'titulo',
+        'contenido',
+    ];
 
-    // =======================================================
-    // MÉTODO ÚNICO BOOTED (Global Scope y Eventos de Modelo)
-    // =======================================================
+    // ===============================
+    // BOOTED (solo para eliminaciones)
+    // ===============================
     protected static function booted()
     {
-        // 1. Alcance global ('activa'): Solo mostrará notas con recordatorios activos (futuros y no completados).
-        static::addGlobalScope('activa', function (Builder $builder) {
-            $builder->whereHas('recordatorio', function ($query) {
-                $query->where('fecha_vencimiento', '>=', now())->where('completado', false);
-            });
-        });
-        
-        // 2. Evento 'deleting' para Borrado en Cascada (Soft Delete)
-        // Se ejecuta ANTES del Soft Delete de la Nota.
+        // Cuando se elimina una nota, se eliminan también sus actividades y recordatorio
         static::deleting(function (Nota $nota) {
-            // Elimina el Recordatorio relacionado (hasOne)
-            $nota->recordatorio()->delete(); 
-            
-            // Elimina todas las Actividades relacionadas (hasMany)
-            $nota->actividads()->delete(); 
+
+            // Eliminar recordatorio si existe
+            if ($nota->recordatorio) {
+                $nota->recordatorio->delete();
+            }
+
+            // Eliminar actividades relacionadas
+            if ($nota->actividads()->exists()) {
+                $nota->actividads()->delete();
+            }
         });
     }
 
-    // =======================================================
+    // ===============================
     // RELACIONES
-    // =======================================================
-    
-    // Relación 1:∞ (belongsTo)
+    // ===============================
+
+    // Una nota pertenece a un usuario
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-    
-    // Relación 1:1 (hasOne)
+
+    // Una nota tiene un recordatorio
     public function recordatorio()
     {
         return $this->hasOne(Recordatorio::class);
     }
-    
-    // Relación 1:∞ (hasMany) - ¡Nueva relación para Actividades!
+
+    // Una nota tiene muchas actividades
     public function actividads()
     {
         return $this->hasMany(Actividad::class);
     }
 
-    // Accesor: Formatear título con estado [cite: 241, 73]
+    // Accesor opcional para mostrar título formateado
     public function getTituloFormateadoAttribute()
     {
         $isCompleted = $this->recordatorio?->completado;
-    
-        if ($isCompleted) {
-            return "[Completado] {$this->titulo}";
-        }
-    
-        return $this->titulo;
+
+        return $isCompleted
+            ? "[Completado] {$this->titulo}"
+            : $this->titulo;
     }
 }
