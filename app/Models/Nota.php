@@ -38,6 +38,10 @@ class Nota extends Model
         return $this->belongsTo(User::class);
     }
     
+    public function recordatorio() 
+    {
+        return $this->hasOne(Recordatorio::class);
+    }
     // Relación 1:∞ (hasMany) - Mantenida para Actividades
     public function actividads()
     {
