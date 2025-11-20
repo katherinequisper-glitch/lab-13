@@ -5,7 +5,6 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\NotaController;
 use App\Http\Controllers\ActividadController;
-use App\Http\Controllers\ReminderController; // ¡Importante: Importar el controlador de Recordatorios!
 
 /*
 |--------------------------------------------------------------------------
@@ -53,21 +52,4 @@ Route::delete('/notas/{nota}', [NotaController::class, 'destroy'])->name('notas.
 Route::prefix('notas/{nota}')->group(function () {
     Route::post('actividads', [ActividadController::class, 'store'])->name('actividads.store');
     Route::patch('actividads/{actividad}', [ActividadController::class, 'update'])->name('actividads.update');
-    // Nota: El borrado de Actividades puede no ser necesario si el PATCH solo hace el "toggle"
 });
-
-
-/*
-|--------------------------------------------------------------------------
-| Rutas de Recordatorios (El formulario que no se mostraba)
-|--------------------------------------------------------------------------
-*/
-
-// Muestra el formulario de creación de recordatorios
-Route::get('/reminders/create', [ReminderController::class, 'create'])->name('reminders.create'); 
-
-// Guarda el nuevo recordatorio (desde el formulario que me mostraste)
-Route::post('/reminders', [ReminderController::class, 'store'])->name('reminders.store'); 
-
-// Para ver la lista de recordatorios (usado en el botón 'Ver Recordatorios')
-Route::get('/reminders', [ReminderController::class, 'index'])->name('reminders.index');

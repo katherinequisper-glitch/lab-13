@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Nota;
-use App\Models\Recordatorio;
 use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
@@ -26,25 +25,15 @@ class DatabaseSeeder extends Seeder
             'titulo' => 'Meeting Notes',
             'contenido' => 'Prepare for project meeting.',
         ]);
-        $note1->recordatorio()->create([
-            'fecha_vencimiento' => now()->addDays(2),
-        ]);
         $note2 = Nota::create([
             'user_id' => $user1->id,
             'titulo' => 'Grocery List',
             'contenido' => 'Buy milk and eggs.',
         ]);
-        $note2->recordatorio()->create([
-            'fecha_vencimiento' => now()->addHours(5),
-        ]);
         $note3 = Nota::create([
             'user_id' => $user2->id,
             'titulo' => 'Study Plan',
             'contenido' => 'Review Laravel Eloquent.',
-        ]);
-        $note3->recordatorio()->create([
-            'fecha_vencimiento' => now()->subDay(), // Won't appear due to global scope
-            'completado' => true,
         ]);
     }
 }

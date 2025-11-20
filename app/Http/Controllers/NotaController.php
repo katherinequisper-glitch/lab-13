@@ -1,47 +1,75 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\User;
+
 use App\Models\Nota;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth; // Necesario para filtrar las notas del usuario
+
 class NotaController extends Controller
 {
+    /**
+     * Muestra una lista de todas las notas del usuario autenticado.
+     * Esta función maneja la ruta GET /notas
+     */
     public function index()
     {
-        // Load users with their active notes, reminders, and subquery for note count
-        $users = User::with(['notas', 'notas.recordatorio'])
-            ->addSelect([
-                'total_notas' => Nota::selectRaw('count(*)')
-                    ->whereColumn('user_id', 'users.id')
-                    ->whereHas('recordatorio', fn($query) => $query->where('fecha_vencimiento', '>=', now()))
-            ])
-            ->get();
-        return view('notas.index', compact('users'));
+        // Obtener solo las notas del usuario autenticado y ordenarlas por fecha de creación (más reciente primero).
+        $notas = Auth::user()->notas()->latest()->get(); 
+        
+        // Asume que tienes una vista en resources/views/notas/index.blade.php
+        return view('notas.index', compact('notas'));
     }
-    // Create a note with a reminder
+
+    /**
+     * Muestra el formulario para crear una nueva nota.
+     * Esta función maneja la ruta GET /notas/create
+     */
+    public function create()
+    {
+        // Simplemente retorna la vista del formulario
+        return view('notas.create');
+    }
+
+    /**
+     * Almacena una nueva nota, incluyendo una fecha de vencimiento opcional.
+     * Esta función maneja la ruta POST /notas
+     */
     public function store(Request $request)
     {
+        // Validar los datos del formulario
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
             'titulo' => 'required|string|max:255',
-            'contenido' => 'required|string',
-            'fecha_vencimiento' => 'required|date|after:now',
+            'contenido' => 'nullable|string',
+            // La fecha es opcional, pero si existe, debe ser una fecha y posterior o igual a 'now'
+            'fecha_vencimiento' => 'nullable|date|after_or_equal:now', 
         ]);
-        $note = Nota::create([
-            'user_id' => $validated['user_id'],
+        
+        // Crea la nota asociada al usuario actual, incluyendo la fecha de vencimiento
+        Auth::user()->notas()->create([
             'titulo' => $validated['titulo'],
             'contenido' => $validated['contenido'],
+            'fecha_vencimiento' => $validated['fecha_vencimiento'], // Se guarda el nuevo campo
         ]);
-        $note->recordatorio()->create([
-            'fecha_vencimiento' => $validated['fecha_vencimiento'],
-        ]);
-        return redirect()->route('notas.index')->with('success', 'Nota creada!');
+        
+        return redirect()->route('notas.index')->with('success', 'Nota creada exitosamente.');
     }
+    
+    /**
+     * Elimina una nota.
+     * Esta función maneja la ruta DELETE /notas/{nota} (con borrado en cascada configurado en el modelo).
+     */
     public function destroy(Nota $nota)
     {
-        // Esto ejecuta el evento 'deleting' en el modelo Nota (Sección 2.C).
+        // Asegurarse de que el usuario es dueño de la nota
+        if (Auth::id() !== $nota->user_id) {
+            abort(403, 'No tienes permiso para eliminar esta nota.');
+        }
+
+        // El borrado en cascada para actividades se ejecuta automáticamente en el modelo Nota.php
         $nota->delete();
 
-        return redirect()->route('notas.index')->with('success', 'La nota y todos sus recordatorios/actividades han sido eliminados.');
+        // Mensaje de éxito limpio
+        return back()->with('success', 'Nota y actividades asociadas eliminadas.');
     }
 }
