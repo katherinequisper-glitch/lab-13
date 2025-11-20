@@ -15,6 +15,9 @@ class Recordatorio extends Model
         'completado'
     ];
 
+    /**
+     * Relación: Recordatorio pertenece a una nota (belongsTo).
+     */
     public function nota()
     {
         return $this->belongsTo(Nota::class);

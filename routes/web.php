@@ -1,10 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\NotaController;
 use App\Http\Controllers\ActividadController;
+// Nota: Se elimina la importación de ReminderController ya que no se usa
 
 /*
 |--------------------------------------------------------------------------
@@ -12,7 +15,6 @@ use App\Http\Controllers\ActividadController;
 |--------------------------------------------------------------------------
 */
 
-// Rutas de autenticación (Login, Register, etc.)
 Auth::routes();
 
 Route::get('/', function () {
@@ -23,33 +25,37 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 /*
 |--------------------------------------------------------------------------
-| Rutas de Posts y Comentarios (Requieren autenticación)
+| Rutas de Posts y Comentarios
 |--------------------------------------------------------------------------
 */
 
 Route::resource('posts', PostController::class);
 
 Route::middleware(['auth'])->group(function () {
-    // CRUD de Comentarios, anidados en Posts
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
     Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| Rutas de Notas y Actividades (Funcionalidad principal del Laboratorio)
+| RUTAS DE NOTAS (LABORATORIO 13/14)
 |--------------------------------------------------------------------------
 */
 
-// RUTAS CRUD Notas
+// Rutas principales de Notas (index, store, delete)
 Route::get('/notas', [NotaController::class, 'index'])->name('notas.index');
 Route::post('/notas', [NotaController::class, 'store'])->name('notas.store');
-Route::delete('/notas/{nota}', [NotaController::class, 'destroy'])->name('notas.destroy'); // Borrado en cascada
+Route::delete('/notas/{nota}', [NotaController::class, 'destroy'])->name('notas.destroy');
 
-// RUTAS CRUD Actividades (Anidadas a Notas)
+/*
+|--------------------------------------------------------------------------
+| Rutas de Actividades para Notas (LABORATORIO 14)
+|--------------------------------------------------------------------------
+*/
 Route::prefix('notas/{nota}')->group(function () {
+    // Nota: Estas rutas asumen que tienes el ActividadController listo para CRUD
     Route::post('actividads', [ActividadController::class, 'store'])->name('actividads.store');
     Route::patch('actividads/{actividad}', [ActividadController::class, 'update'])->name('actividads.update');
+    // Si tienes rutas de eliminación o visualización, añádelas aquí (ej: ActividadController@destroy, ActividadController@show)
 });

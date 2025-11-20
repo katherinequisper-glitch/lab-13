@@ -2,74 +2,72 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User; // Necesario para la subconsulta en el index
 use App\Models\Nota;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // Necesario para filtrar las notas del usuario
+use App\Http\Controllers\Controller; 
 
 class NotaController extends Controller
 {
     /**
-     * Muestra una lista de todas las notas del usuario autenticado.
-     * Esta función maneja la ruta GET /notas
+     * Muestra una lista de todos los usuarios con sus notas activas.
+     * Implementa la SUB CONSULTA y carga de relaciones (REQUISITO LAB 13).
      */
     public function index()
     {
-        // Obtener solo las notas del usuario autenticado y ordenarlas por fecha de creación (más reciente primero).
-        $notas = Auth::user()->notas()->latest()->get(); 
-        
+        // Cargar usuarios con sus notas activas (gracias al Global Scope en Nota.php)
+        // y con sus recordatorios.
+        $users = User::with(['notas', 'notas.recordatorio'])
+            ->addSelect([
+                // Subconsulta para calcular el total de notas activas por usuario
+                // Nota: La subconsulta debe replicar la lógica del Global Scope para el conteo.
+                'total_notas_activas' => Nota::selectRaw('count(*)')
+                    ->whereColumn('user_id', 'users.id')
+                    ->whereHas('recordatorio', fn($query) => $query->where('fecha_vencimiento', '>=', now()))
+            ])
+            ->get();
+
         // Asume que tienes una vista en resources/views/notas/index.blade.php
-        return view('notas.index', compact('notas'));
+        return view('notas.index', compact('users'));
     }
 
     /**
-     * Muestra el formulario para crear una nueva nota.
-     * Esta función maneja la ruta GET /notas/create
-     */
-    public function create()
-    {
-        // Simplemente retorna la vista del formulario
-        return view('notas.create');
-    }
-
-    /**
-     * Almacena una nueva nota, incluyendo una fecha de vencimiento opcional.
-     * Esta función maneja la ruta POST /notas
+     * Almacena una nueva nota, creando el Recordatorio asociado (REQUISITO LAB 13).
      */
     public function store(Request $request)
     {
-        // Validar los datos del formulario
         $validated = $request->validate([
+            'user_id' => 'required|exists:users,id', 
             'titulo' => 'required|string|max:255',
-            'contenido' => 'nullable|string',
-            // La fecha es opcional, pero si existe, debe ser una fecha y posterior o igual a 'now'
-            'fecha_vencimiento' => 'nullable|date|after_or_equal:now', 
+            'contenido' => 'required|string',
+            'fecha_vencimiento' => 'required|date|after:now', // La fecha es obligatoria y debe ser futura
         ]);
         
-        // Crea la nota asociada al usuario actual, incluyendo la fecha de vencimiento
-        Auth::user()->notas()->create([
+        // 1. Crear la Nota (solo con datos de la tabla 'notas')
+        $note = Nota::create([
+            'user_id' => $validated['user_id'],
             'titulo' => $validated['titulo'],
             'contenido' => $validated['contenido'],
-            'fecha_vencimiento' => $validated['fecha_vencimiento'], // Se guarda el nuevo campo
+        ]);
+
+        // 2. Crear el Recordatorio usando la relación hasOne (datos de la tabla 'recordatorios')
+        $note->recordatorio()->create([
+            'fecha_vencimiento' => $validated['fecha_vencimiento'],
         ]);
         
-        return redirect()->route('notas.index')->with('success', 'Nota creada exitosamente.');
+        return redirect()->route('notas.index')->with('success', 'Nota y Recordatorio creados exitosamente.');
     }
     
     /**
-     * Elimina una nota.
-     * Esta función maneja la ruta DELETE /notas/{nota} (con borrado en cascada configurado en el modelo).
+     * Elimina una nota (REQUISITO LAB 14).
+     * El borrado en cascada para Recordatorio y Actividades se maneja en Nota.php.
      */
     public function destroy(Nota $nota)
     {
-        // Asegurarse de que el usuario es dueño de la nota
-        if (Auth::id() !== $nota->user_id) {
-            abort(403, 'No tienes permiso para eliminar esta nota.');
-        }
-
-        // El borrado en cascada para actividades se ejecuta automáticamente en el modelo Nota.php
+        // La llamada a delete() activa el evento 'deleting' en Nota.php,
+        // que a su vez elimina el Recordatorio y las Actividades.
         $nota->delete();
 
-        // Mensaje de éxito limpio
-        return back()->with('success', 'Nota y actividades asociadas eliminadas.');
+        return back()->with('success', 'Nota, recordatorio y actividades eliminadas.');
     }
 }
